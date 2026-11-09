@@ -1,0 +1,30 @@
+name: Playgama Farmer
+
+on:
+  workflow_dispatch: # Позволяет запускать вручную кнопкой
+  # schedule:
+  #   - cron: '0 */2 * * *' # Раскомментируй, чтобы запускать каждые 2 часа
+
+jobs:
+  farm:
+    runs-on: ubuntu-latest
+    # Указываем, что нам нужен виртуальный экран
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+
+      - name: Install dependencies
+        run: |
+          pip install playwright
+          playwright install chromium
+          playwright install-deps
+
+      - name: Run bot with Xvfb
+        # xvfb-run создает виртуальный дисплей, чтобы браузер работал не в headless
+        run: |
+          xvfb-run --auto-servernum --server-args="-screen 0 1280x720x24" python bot.py
