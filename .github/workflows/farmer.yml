@@ -12,10 +12,10 @@ jobs:
       matrix:
         # СЮДА ВСТАВЬ ССЫЛКИ НА ТВОИ 4 ИГРЫ
         game_url: [
-          "https://playgama.com/game/kick-lucky-block", # Пример
-          "https://playgama.com/game/steal-the-egg",    # Пример
-          "https://playgama.com/game/cosmic-cleaners",  # Пример
-          "https://playgama.com/game/твоя-4-игра"       # Пример
+          "https://playgama.ai/play/3wn224fqza4lik", # Пример
+          "https://playgama.ai/play/qz4275umslq3zk",    # Пример
+          "https://playgama.ai/play/dvyclrh6fqzwdd",  # Пример
+          "https://playgama.ai/play/e5taob35jvvphv"       # Пример
         ]
       fail-fast: false # Если одна упадет, остальные продолжат
     steps:
