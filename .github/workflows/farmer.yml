@@ -1,14 +1,23 @@
 name: Playgama Farmer
 
 on:
-  workflow_dispatch: # Позволяет запускать вручную кнопкой
+  workflow_dispatch: # Ручной запуск
   # schedule:
-  #   - cron: '0 */2 * * *' # Раскомментируй, чтобы запускать каждые 2 часа
+  #   - cron: '0 */4 * * *' # Автозапуск каждые 4 часа (если раскомментировать)
 
 jobs:
   farm:
     runs-on: ubuntu-latest
-    # Указываем, что нам нужен виртуальный экран
+    strategy:
+      matrix:
+        # СЮДА ВСТАВЬ ССЫЛКИ НА ТВОИ 4 ИГРЫ
+        game_url: [
+          "https://playgama.com/game/kick-lucky-block", # Пример
+          "https://playgama.com/game/steal-the-egg",    # Пример
+          "https://playgama.com/game/cosmic-cleaners",  # Пример
+          "https://playgama.com/game/твоя-4-игра"       # Пример
+        ]
+      fail-fast: false # Если одна упадет, остальные продолжат
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -25,6 +34,6 @@ jobs:
           playwright install-deps
 
       - name: Run bot with Xvfb
-        # xvfb-run создает виртуальный дисплей, чтобы браузер работал не в headless
+        # Передаем URL из матрицы в скрипт
         run: |
-          xvfb-run --auto-servernum --server-args="-screen 0 1280x720x24" python bot.py
+          xvfb-run --auto-servernum --server-args="-screen 0 1280x720x24" python bot.py ${{ matrix.game_url }}
