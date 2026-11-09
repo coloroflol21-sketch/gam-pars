@@ -1,23 +1,20 @@
 name: Playgama Farmer
 
 on:
-  workflow_dispatch: # Ручной запуск
-  # schedule:
-  #   - cron: '0 */4 * * *' # Автозапуск каждые 4 часа (если раскомментировать)
+  workflow_dispatch: 
 
 jobs:
   farm:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        # СЮДА ВСТАВЬ ССЫЛКИ НА ТВОИ 4 ИГРЫ
         game_url: [
-          "https://playgama.ai/play/3wn224fqza4lik", # Пример
-          "https://playgama.ai/play/qz4275umslq3zk",    # Пример
-          "https://playgama.ai/play/dvyclrh6fqzwdd",  # Пример
-          "https://playgama.ai/play/e5taob35jvvphv"       # Пример
+          "https://playgama.ai/play/3wn224fqza4lik",
+          "https://playgama.ai/play/qz4275umslq3zk",
+          "https://playgama.ai/play/dvyclrh6fqzwdd",
+          "https://playgama.ai/play/e5taob35jvvphv"
         ]
-      fail-fast: false # Если одна упадет, остальные продолжат
+      fail-fast: false 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -34,6 +31,14 @@ jobs:
           playwright install-deps
 
       - name: Run bot with Xvfb
-        # Передаем URL из матрицы в скрипт
         run: |
           xvfb-run --auto-servernum --server-args="-screen 0 1280x720x24" python bot.py ${{ matrix.game_url }}
+
+      # Этот шаг сработает, только если скрипт упал с ошибкой
+      - name: Upload Error Screenshots
+        if: failure() 
+        uses: actions/upload-artifact@v4
+        with:
+          name: error-screenshots-${{ strategy.job-index }}
+          path: ./*.png
+          retention-days: 1
