@@ -26,9 +26,8 @@ jobs:
 
       - name: Install dependencies
         run: |
-          pip install playwright
-          playwright install chromium
-          playwright install-deps
+          pip install playwright --upgrade
+          playwright install --with-deps chromium
 
       - name: Run bot with Xvfb
         run: |
