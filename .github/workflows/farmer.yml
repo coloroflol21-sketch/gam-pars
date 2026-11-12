@@ -9,9 +9,6 @@ jobs:
     strategy:
       matrix:
         game_url: [
-          "https://playgama.ai/play/3wn224fqza4lik",
-          "https://playgama.ai/play/qz4275umslq3zk",
-          "https://playgama.ai/play/dvyclrh6fqzwdd",
           "https://playgama.ai/play/e5taob35jvvphv"
         ]
       fail-fast: false 
