@@ -5,12 +5,10 @@ on:
 
 jobs:
   farm:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     strategy:
       matrix:
-        game_url: [
-          "https://playgama.ai/play/e5taob35jvvphv"
-        ]
+        game_url: ["https://playgama.ai/play/e5taob35jvvphv"]
       fail-fast: false 
     steps:
       - name: Checkout code
@@ -30,11 +28,11 @@ jobs:
         run: |
           xvfb-run --auto-servernum --server-args="-screen 0 1280x720x24" python bot.py ${{ matrix.game_url }}
 
-      # Этот шаг сработает, только если скрипт упал с ошибкой
-      - name: Upload Error Screenshots
-        if: failure() 
+      - name: Upload Screenshots
+        # Сработает в любом случае (успех или ошибка)
+        if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: error-screenshots-${{ strategy.job-index }}
-          path: ./*.png
+          name: debug-screenshots
+          path: screenshot_*.png
           retention-days: 1
