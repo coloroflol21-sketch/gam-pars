@@ -44,7 +44,6 @@ async def handle_ads(page):
         pass
 
 async def play_game():
-    # 🛡️ РАНДОМНАЯ ЗАДЕРЖКА СТАРТА (чтобы параллельные боты не стартовали одновременно)
     start_delay = random.randint(0, 240)
     print(f"Ожидание перед стартом: {start_delay} секунд...")
     await asyncio.sleep(start_delay)
@@ -52,15 +51,9 @@ async def play_game():
     async with async_playwright() as p:
         browser = await p.chromium.launch(
             headless=False,
-            args=[
-                "--no-sandbox", 
-                "--disable-dev-shm-usage",
-                "--use-gl=swiftshader",
-                "--enable-unsafe-swiftshader"
-            ]
+            args=["--no-sandbox", "--disable-dev-shm-usage", "--use-gl=swiftshader", "--enable-unsafe-swiftshader"]
         )
         
-        # 🎲 ВЫБИРАЕМ СЛУЧАЙНЫЕ ПАРАМЕТРЫ
         selected_ua = random.choice(USER_AGENTS)
         selected_viewport = random.choice(VIEWPORTS)
         selected_locale = random.choice(LOCALES)
@@ -73,8 +66,6 @@ async def play_game():
             locale=selected_locale
         )
         page = await context.new_page()
-        
-        # ВОЗВРАЩАЕМ ЛОГИ КОНСОЛИ (для отладки)
         page.on("console", lambda msg: print(f"[BROWSER CONSOLE] {msg.type}: {msg.text}"))
         
         print(f"Открываем игру: {GAME_URL}")
@@ -82,11 +73,9 @@ async def play_game():
             await page.goto(GAME_URL, wait_until="networkidle", timeout=60000)
             await asyncio.sleep(10)
             
-            # 📸 СКРИНШОТ 1
             await page.screenshot(path="screenshot_1_loaded.png")
             print("Скриншот 1 сделан.")
 
-            # Клик в центр на основе выбранного разрешения
             center_x = selected_viewport["width"] // 2
             center_y = selected_viewport["height"] // 2
             await page.mouse.click(center_x, center_y)
@@ -98,11 +87,15 @@ async def play_game():
             await browser.close()
             return
         
-        target_seconds = random.randint(900, 1200) # 15-20 минут
+        target_seconds = random.randint(900, 1200)
         print(f"Начинаем имитацию игры ({target_seconds} секунд)...")
         
         end_time = asyncio.get_event_loop().time() + target_seconds
+        
         last_ad_check = asyncio.get_event_loop().time()
+        # 🚨 ДОБАВЛЕНО: Таймер для принудительного вызова рекламы
+        last_ad_force = asyncio.get_event_loop().time() 
+        
         keys = ["Space", "ArrowUp", "Enter"]
         move_keys = ["KeyW", "KeyA", "KeyS", "KeyD"]
 
@@ -111,22 +104,51 @@ async def play_game():
             while asyncio.get_event_loop().time() < end_time:
                 loop_count += 1
                 
-                # 📸 СКРИНШОТ 2 (через минуту)
                 if loop_count == 20:
                     await page.screenshot(path="screenshot_2_midgame.png")
                     print("Скриншот 2 сделан (середина сессии).")
 
-                # Закрываем новые вкладки
                 if len(context.pages) > 1:
                     for extra_page in context.pages[1:]:
                         await extra_page.close()
                     await page.bring_to_front()
                 
-                # Проверка рекламы
+                # 1. ПРОВЕРКА НА ВСПЛЫВАЮЩУЮ РЕКЛАМУ (которая вылезла сама)
                 if asyncio.get_event_loop().time() - last_ad_check > 45:
                     print("Проверка на наличие рекламы...")
                     await handle_ads(page)
                     last_ad_check = asyncio.get_event_loop().time()
+
+                # 🚨 ДОБАВЛЕНО: 2. ПРИНУДИТЕЛЬНЫЙ ВЫЗОВ РЕКЛАМЫ ЧЕРЕЗ SDK КАЖДЫЕ 90 СЕКУНД
+                if asyncio.get_event_loop().time() - last_ad_force > 90:
+                    print("Принудительный вызов Interstitial рекламы через SDK...")
+                    try:
+                        await page.evaluate("""
+                            if (window.bridge && window.bridge.advertisement) {
+                                window.bridge.advertisement.showInterstitial();
+                            } else if (window.playgama && window.playgama.bridge) {
+                                window.playgama.bridge.advertisement.showInterstitial();
+                            } else {
+                                console.log('SDK не найден в window');
+                            }
+                        """)
+                    except Exception as e:
+                        print(f"Ошибка вызова рекламы: {e}")
+                    
+                    last_ad_force = asyncio.get_event_loop().time()
+                    
+                    # Ждем, пока реклама прогрузится, и пытаемся закрыть ее
+                    await asyncio.sleep(7) 
+                    try:
+                        close_btn = page.locator("text=Close").first
+                        if await close_btn.is_visible(timeout=2000):
+                            print("Закрываем вызванную рекламу...")
+                            await close_btn.click()
+                    except:
+                        pass
+                    
+                    # Пропускаем остаток цикла, чтобы дать странице прийти в себя после рекламы
+                    continue
 
                 action = random.random()
                 
@@ -135,15 +157,12 @@ async def play_game():
                     await asyncio.sleep(random.uniform(5.0, 12.0))
                     continue
                 
-                # Безопасная зона кликов зависит от размера экрана
                 x = random.randint(100, selected_viewport["width"] - 300)
                 y = random.randint(150, selected_viewport["height"] - 100)
                 
                 await page.mouse.move(x, y, steps=15)
                 
-                # Обычный клик или УДЕРЖАНИЕ (для рыбалочной шкалы)
                 if action >= 0.7:
-                    # Имитация удержания кнопки мыши
                     await page.mouse.down() 
                     await asyncio.sleep(random.uniform(2.0, 5.0)) 
                     await page.mouse.up()
@@ -151,7 +170,6 @@ async def play_game():
                 elif action > 0.4:
                     await page.mouse.click(x, y)
                 
-                # Нажатия клавиш
                 if random.random() > 0.5:
                     m_key = random.choice(move_keys)
                     await page.keyboard.down(m_key)
