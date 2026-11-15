@@ -120,34 +120,53 @@ async def play_game():
                     last_ad_check = asyncio.get_event_loop().time()
 
                 # 🚨 ДОБАВЛЕНО: 2. ПРИНУДИТЕЛЬНЫЙ ВЫЗОВ РЕКЛАМЫ ЧЕРЕЗ SDK КАЖДЫЕ 90 СЕКУНД
+                # 🚨 ПРИНУДИТЕЛЬНЫЙ ВЫЗОВ РЕКЛАМЫ (с обходом туториала) КАЖДЫЕ 90 СЕКУНД
                 if asyncio.get_event_loop().time() - last_ad_force > 90:
-                    print("Принудительный вызов Interstitial рекламы через SDK...")
-                    try:
-                        await page.evaluate("""
-                            if (window.bridge && window.bridge.advertisement) {
-                                window.bridge.advertisement.showInterstitial();
-                            } else if (window.playgama && window.playgama.bridge) {
-                                window.playgama.bridge.advertisement.showInterstitial();
-                            } else {
-                                console.log('SDK не найден в window');
-                            }
-                        """)
-                    except Exception as e:
-                        print(f"Ошибка вызова рекламы: {e}")
+                    print("Принудительный вызов рекламы (с попыткой обхода туториала)...")
                     
+                    ad_called = False
+                    for frame in page.frames:
+                        try:
+                            has_bridge = await frame.evaluate("!!(window.bridge || (window.playgama && window.playgama.bridge))")
+                            
+                            if has_bridge:
+                                print(f"Нашли SDK внутри фрейма: {frame.url[:50]}...")
+                                # Вызываем рекламу и пытаемся сбросить флаги туториала
+                                await frame.evaluate("""
+                                    // 1. Пытаемся сбросить возможные флаги туториала в глобальной области видимости
+                                    try { window.isTutorial = false; } catch(e) {}
+                                    try { window.gameIsTutorial = false; } catch(e) {}
+                                    
+                                    // 2. Вызываем рекламу
+                                    let sdk = window.bridge || (window.playgama && window.playgama.bridge);
+                                    if (sdk && sdk.advertisement) {
+                                        // Пытаемся вызвать именно Interstitial, если он заблокирован туториалом,
+                                        // принудительно вызываем рекламный менеджер
+                                        sdk.advertisement.showInterstitial().catch(e => console.log("Ошибка показа:", e));
+                                    }
+                                """)
+                                ad_called = True
+                                break
+                        except Exception:
+                            pass
+                    
+                    if not ad_called:
+                        print("SDK не найден ни в одном фрейме.")
+
                     last_ad_force = asyncio.get_event_loop().time()
                     
-                    # Ждем, пока реклама прогрузится, и пытаемся закрыть ее
+                    # Ждем прогрузки рекламы
                     await asyncio.sleep(7) 
                     try:
-                        close_btn = page.locator("text=Close").first
-                        if await close_btn.is_visible(timeout=2000):
-                            print("Закрываем вызванную рекламу...")
-                            await close_btn.click()
+                        for frame in page.frames:
+                            close_btn = frame.locator("text=Close").first
+                            if await close_btn.is_visible(timeout=1000):
+                                print("Закрываем вызванную рекламу...")
+                                await close_btn.click()
+                                break
                     except:
                         pass
                     
-                    # Пропускаем остаток цикла, чтобы дать странице прийти в себя после рекламы
                     continue
 
                 action = random.random()
