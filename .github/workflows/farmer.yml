@@ -10,10 +10,7 @@ jobs:
       matrix:
         # Блочный стиль записи массива (каждая ссылка с новой строки)
         game_url: 
-          - "https://playgama.ai/play/e5taob35jvvphv"
-          - "https://playgama.ai/play/e5taob35jvvphv"
-          - "https://playgama.ai/play/e5taob35jvvphv"
-          - "https://playgama.ai/play/e5taob35jvvphv"
+          - "https://playgama.ai/play/dvyclrh6fqzwdd"
       fail-fast: false 
     steps:
       - name: Checkout code
